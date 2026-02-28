@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASAM — Ashrafk.salim Serum Accumulation Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #06080b;
+  --panel: #0b0f15;
+  --border: #161e2a;
+  --border2: #1e2d3d;
+  --accent: #00c8ff;
+  --accent2: #ff5e1a;
+  --accent3: #39ff7a;
+  --warn: #ffd700;
+  --text: #b8c8d8;
+  --muted: #3a4a5a;
+  --glow: rgba(0,200,255,0.12);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+}
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 70% 40% at 10% 0%, rgba(0,200,255,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 90% 100%, rgba(255,94,26,0.05) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+.scanlines {
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none; z-index:0;
+}
+.grid-bg {
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,200,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.025) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none; z-index:0;
+}
+
+/* ── Layout ── */
+.wrap { position:relative; z-index:1; max-width:1200px; margin:0 auto; padding:32px 20px 60px; }
+
+/* ── Header ── */
+.header { margin-bottom:36px; }
+.header-top { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.brand { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:4px; margin-bottom:6px; }
+.title { font-family:'Bebas Neue',sans-serif; font-size:clamp(36px,6vw,72px); color:#fff; letter-spacing:2px; line-height:0.95; }
+.title span { color:var(--accent); }
+.author-badge {
+  background: linear-gradient(135deg, #0d1822, #111c28);
+  border:1px solid var(--border2);
+  border-left:3px solid var(--accent);
+  padding:12px 20px;
+  border-radius:3px;
+  text-align:right;
+}
+.author-label { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:3px; margin-bottom:4px; }
+.author-name { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--accent); letter-spacing:3px; }
+
+/* Equation banner */
+.eq-banner {
+  background: #080c11;
+  border:1px solid var(--border2);
+  border-top:2px solid var(--accent);
+  border-radius:3px;
+  padding:16px 24px;
+  font-family:'Share Tech Mono',monospace;
+  font-size:13px;
+  color: #7ab8d8;
+  line-height:2;
+  margin-bottom:28px;
+  overflow-x:auto;
+}
+.eq-banner .eq-title { color:var(--accent); font-size:10px; letter-spacing:3px; margin-bottom:8px; }
+.eq-banner .eq-main { color:#fff; font-size:15px; }
+.eq-banner .eq-sub { color:var(--muted); font-size:11px; }
+
+/* ── Main grid ── */
+.main-grid { display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start; }
+@media(max-width:860px){ .main-grid { grid-template-columns:1fr; } }
+
+/* ── Panels ── */
+.panel {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:22px;
+  position:relative;
+}
+.panel::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--accent), transparent);
+  border-radius:4px 4px 0 0;
+}
+.panel.orange-top::before { background:linear-gradient(90deg, var(--accent2), transparent); }
+.panel.green-top::before  { background:linear-gradient(90deg, var(--accent3), transparent); }
+
+.ptitle {
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px; color:var(--accent);
+  letter-spacing:3px; text-transform:uppercase;
+  margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.ptitle::after { content:''; flex:1; height:1px; background:var(--border); }
+.ptitle.orange { color:var(--accent2); }
+
+/* ── Form elements ── */
+.field { margin-bottom:14px; }
+.flabel {
+  font-family:'Share Tech Mono',monospace;
+  font-size:9px; color:var(--muted);
+  letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; display:block;
+}
+select, input[type="number"] {
+  background:#060a0f; border:1px solid var(--border2);
+  color:var(--text); padding:9px 11px;
+  font-family:'Share Tech Mono',monospace; font-size:12px;
+  border-radius:3px; width:100%;
+  transition:border-color 0.2s, box-shadow 0.2s;
+  appearance:none;
+}
+select:focus, input:focus {
+  outline:none; border-color:var(--accent);
+  box-shadow:0 0 0 2px var(--glow);
+}
+select option { background:#0b0f15; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.three-col { display:grid; grid-template-columns:1fr 80px 34px; gap:7px; align-items:center; }
+
+/* ── Ester rows ── */
+.ester-list { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.ester-row { animation:rowIn 0.25s ease; }
+@keyframes rowIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.remove-btn {
+  background:transparent; border:1px solid #2a1010; color:#ff3333;
+  width:34px; height:34px; border-radius:3px; cursor:pointer;
+  font-size:18px; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s; flex-shrink:0;
+}
+.remove-btn:hover { background:#ff222222; border-color:#ff3333; }
+.add-btn {
+  width:100%; background:transparent;
+  border:1px dashed var(--muted); color:var(--muted);
+  padding:9px; border-radius:3px; cursor:pointer;
+  font-family:'Share Tech Mono',monospace; font-size:11px;
+  letter-spacing:2px; transition:all 0.2s; margin-bottom:14px;
+}
+.add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.col-headers {
+  display:grid; grid-template-columns:1fr 80px 34px; gap:7px;
+  margin-bottom:4px;
+}
+
+/* ── Threshold bar ── */
+.threshold-wrap { margin:14px 0; }
+.thresh-bar-bg {
+  height:6px; background:var(--border); border-radius:3px; overflow:hidden;
+  margin-top:6px; position:relative;
+}
+.thresh-bar-fill {
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg, var(--accent3), var(--warn), var(--accent2));
+  transition:width 0.4s ease;
+}
+
+/* Buttons */
+.calc-btn {
+  width:100%; background:var(--accent); border:none; color:#000;
+  padding:13px; border-radius:3px; cursor:pointer;
+  font-family:'Bebas Neue',sans-serif; font-size:20px;
+  letter-spacing:4px; transition:all 0.2s;
+  position:relative; overflow:hidden;
+}
+.calc-btn::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+  transform:translateX(-100%); transition:transform 0.5s;
+}
+.calc-btn:hover::before { transform:translateX(100%); }
+.calc-btn:hover { box-shadow:0 0 24px rgba(0,200,255,0.5); }
+
+/* ── Results ── */
+#resultsWrap { display:none; }
+#resultsWrap.show { display:block; }
+
+/* Stats row */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+@media(max-width:700px){ .stats-row { grid-template-columns:repeat(2,1fr); } }
+.stat {
+  background:#080c11; border:1px solid var(--border2);
+  border-radius:3px; padding:14px 12px; text-align:center;
+}
+.sv { font-family:'Share Tech Mono',monospace; font-size:20px; color:var(--accent); line-height:1; margin-bottom:3px; }
+.sv.o { color:var(--accent2); } .sv.g { color:var(--accent3); } .sv.y { color:var(--warn); }
+.sl { font-size:10px; color:var(--muted); font-family:'Share Tech Mono',monospace; letter-spacing:1px; }
+
+/* Phase indicator */
+.phase-row { display:flex; gap:0; margin-bottom:20px; border:1px solid var(--border2); border-radius:3px; overflow:hidden; }
+.phase-seg { flex:1; text-align:center; padding:8px 4px; font-family:'Share Tech Mono',monospace; font-size:9px; letter-spacing:2px; }
+.phase-ascent  { background:rgba(0,200,255,0.12);  color:var(--accent);  border-right:1px solid var(--border); }
+.phase-plateau { background:rgba(57,255,122,0.10); color:var(--accent3); border-right:1px solid var(--border); }
+.phase-taper   { background:rgba(255,215,0,0.10);  color:var(--warn);    border-right:1px solid var(--border); }
+.phase-clear   { background:rgba(255,94,26,0.10);  color:var(--accent2); }
+
+/* Main output table */
+.table-scroll { overflow-x:auto; border:1px solid var(--border2); border-radius:3px; margin-bottom:20px; }
+table { width:100%; border-collapse:collapse; font-family:'Share Tech Mono',monospace; font-size:11px; }
+thead tr { background:#07090d; border-bottom:1px solid var(--accent); }
+th { padding:10px 12px; text-align:left; color:var(--accent); font-size:9px; letter-spacing:2px; white-space:nowrap; }
+tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+tbody tr:hover { background:rgba(0,200,255,0.04); }
+tbody tr.phase-a td:first-child { border-left:3px solid var(--accent); }
+tbody tr.phase-p td:first-child { border-left:3px solid var(--accent3); }
+tbody tr.phase-t td:first-child { border-left:3px solid var(--warn); }
+tbody tr.phase-c td:first-child { border-left:3px solid var(--accent2); }
+td { padding:9px 12px; color:var(--text); white-space:nowrap; }
+td.num { text-align:right; font-variant-numeric:tabular-nums; }
+td.wk { color:#fff; font-weight:600; }
+td.muted { color:var(--muted); font-size:10px; }
+
+/* Serum bar */
+.bar-cell { position:relative; min-width:100px; }
+.bar-fill { position:absolute; left:0;top:0;bottom:0; border-radius:0; transition:width 0.5s; opacity:0.15; }
+.bar-val { position:relative; z-index:1; }
+
+/* Tag */
+.tag { display:inline-block; padding:2px 7px; border-radius:2px; font-size:9px; letter-spacing:1px; }
+.ta { background:rgba(0,200,255,0.15); color:var(--accent); }
+.tp { background:rgba(57,255,122,0.12); color:var(--accent3); }
+.tt { background:rgba(255,215,0,0.12); color:var(--warn); }
+.tc { background:rgba(255,94,26,0.12); color:var(--accent2); }
+
+/* Note / formula box */
+.formula-box {
+  background:#07090e; border:1px solid var(--border2);
+  border-left:3px solid var(--accent2);
+  border-radius:0 3px 3px 0; padding:14px 18px;
+  font-family:'Share Tech Mono',monospace; font-size:11px;
+  color:var(--accent2); line-height:1.8; margin-bottom:16px;
+}
+.clearance-box {
+  background:#07090e; border:1px solid var(--border2);
+  border-left:3px solid var(--accent3);
+  border-radius:0 3px 3px 0; padding:14px 18px;
+  font-family:'Share Tech Mono',monospace; font-size:11px;
+  color:var(--accent3); line-height:1.8;
+}
+.clearance-box .big { font-size:18px; color:#fff; display:block; margin:6px 0; }
+
+/* Ester sub-table */
+.sub-panel { margin-top:16px; }
+
+/* Placeholder */
+#placeholder { text-align:center; padding:80px 24px; color:var(--muted); }
+#placeholder .big-hex { font-size:64px; margin:12px 0; opacity:0.2; }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="grid-bg"></div>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="brand">// ASAM — Serum Accumulation Model</div>
+      <div class="title">Ester <span>Serum</span><br>Calculator</div>
+    </div>
+    <div class="author-badge">
+      <div class="author-label">Equation By</div>
+      <div class="author-name">Ashrafk.salim</div>
+    </div>
+  </div>
+
+  <!-- Equation display -->
+  <div class="eq-banner">
+    <div class="eq-title">// ASHRAFK.SALIM SERUM ACCUMULATION MODEL (ASAM)</div>
+    <div class="eq-main">
+      S<sub>total</sub>(t) = Σ<sub>i</sub> Σ<sub>j≤N(t)</sub> [ D<sub>i</sub> · f<sub>i</sub> · 2<sup>−(t−t<sub>j</sub>)/h<sub>i</sub></sup> ]
+    </div>
+    <div class="eq-sub">
+      &nbsp;&nbsp;where: D = dose/inj &nbsp;|&nbsp; f = conversion factor &nbsp;|&nbsp; h = half-life (days) &nbsp;|&nbsp; t<sub>j</sub> = injection day
+      <br>&nbsp;&nbsp;Constraint: S<sub>total</sub>(t) ≤ Θ (threshold) &nbsp;|&nbsp;
+      T<sub>clear</sub> = T<sub>end</sub> + h<sub>max</sub> · log₂(S<sub>total</sub>(T<sub>end</sub>) / C<sub>min</sub>)
+    </div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-grid">
+
+  <!-- LEFT CONFIG -->
+  <div>
+    <div class="panel">
+      <div class="ptitle">Configuration</div>
+
+      <div class="two-col">
+        <div class="field">
+          <label class="flabel">Cycle Weeks</label>
+          <input type="number" id="cycleWeeks" value="12" min="2" max="52">
+        </div>
+        <div class="field">
+          <label class="flabel">Inject Freq</label>
+          <select id="freq">
+            <option value="1">1× / week</option>
+            <option value="2" selected>2× / week</option>
+            <option value="3">EOD (~3×)</option>
+            <option value="7">Daily</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="field">
+          <label class="flabel">Target Θ (mg actual test/wk)</label>
+          <input type="number" id="threshold" value="600" min="100" max="3000">
+        </div>
+        <div class="field">
+          <label class="flabel">Ascent Weeks (load phase)</label>
+          <input type="number" id="ascentWeeks" value="3" min="1" max="8">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="flabel">Taper Weeks (descent phase)</label>
+        <input type="number" id="taperWeeks" value="3" min="1" max="8">
+      </div>
+
+      <div class="ptitle" style="margin-top:4px">Testosterone Esters</div>
+      <div class="col-headers">
+        <span class="flabel">Ester</span>
+        <span class="flabel" style="text-align:center">mg/inj</span>
+        <span></span>
+      </div>
+      <div class="ester-list" id="esterList"></div>
+      <button class="add-btn" onclick="addEster()">+ ADD ESTER</button>
+
+      <button class="calc-btn" onclick="calculate()">RUN ASAM</button>
+    </div>
+  </div>
+
+  <!-- RIGHT RESULTS -->
+  <div>
+    <div id="placeholder" class="panel">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px">AWAITING INPUT</div>
+      <div class="big-hex">⬡</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px">Configure esters → RUN ASAM</div>
+    </div>
+
+    <div id="resultsWrap">
+
+      <!-- Stats -->
+      <div class="stats-row" id="statsRow"></div>
+
+      <!-- Phase timeline -->
+      <div class="phase-row" id="phaseRow"></div>
+
+      <!-- Main weekly table -->
+      <div class="panel" style="padding:0;overflow:hidden;margin-bottom:20px;">
+        <div style="padding:16px 20px 12px; border-bottom:1px solid var(--border)">
+          <div class="ptitle" style="margin-bottom:0">Weekly Output Table — ASAM</div>
+        </div>
+        <div class="table-scroll" style="border:none;border-radius:0;" id="mainTable"></div>
+      </div>
+
+      <!-- Clearance + formula -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div class="clearance-box" id="clearBox"></div>
+        <div class="formula-box" id="formulaBox"></div>
+      </div>
+
+      <!-- Per-ester breakdown -->
+      <div class="panel orange-top" style="padding:0;overflow:hidden;">
+        <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+          <div class="ptitle orange" style="margin-bottom:0">Per-Ester Pharmacokinetic Breakdown</div>
+        </div>
+        <div class="table-scroll" style="border:none;border-radius:0;" id="esterTable"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const ESTERS = {
+  "Testosterone Propionate":    { h: 3,  f: 0.800 },
+  "Testosterone Enanthate":     { h: 8,  f: 0.718 },
+  "Testosterone Cypionate":     { h: 10, f: 0.700 },
+  "Testosterone Hexahydrobenzylcarbonate": { h: 14, f: 0.670 },
+  "Testosterone Decanoate":     { h: 15, f: 0.620 },
+  "Testosterone Undecanoate":   { h: 21, f: 0.610 },
+};
+
+const FREQ_DAYS = { 1:[3.5], 2:[1,4], 3:[0,2,4], 7:[0,1,2,3,4,5,6] };
+const FREQ_LABEL = { 1:'Sun', 2:'Mon / Thu', 3:'Mon / Wed / Fri', 7:'Daily' };
+
+let rows = [], rid = 0;
+
+function addEster(name=Object.keys(ESTERS)[0], mg=100){
+  const id=rid++;
+  rows.push({id,name,mg});
+  renderRows();
+}
+function removeEster(id){ rows=rows.filter(r=>r.id!==id); renderRows(); }
+function updateEster(id,f,v){ const r=rows.find(x=>x.id===id); if(r) r[f]=v; }
+
+function renderRows(){
+  const el=document.getElementById('esterList');
+  el.innerHTML='';
+  rows.forEach(row=>{
+    const d=document.createElement('div');
+    d.className='ester-row three-col';
+    d.innerHTML=`
+      <select onchange="updateEster(${row.id},'name',this.value)">
+        ${Object.keys(ESTERS).map(e=>`<option${e===row.name?' selected':''}>${e}</option>`).join('')}
+      </select>
+      <input type="number" value="${row.mg}" min="1" max="999" style="text-align:center"
+        onchange="updateEster(${row.id},'mg',+this.value)">
+      <button class="remove-btn" onclick="removeEster(${row.id})">×</button>`;
+    el.appendChild(d);
+  });
+}
+
+function calcSerum(esterDoses, dayT, cycleEndDay, freq){
+  // esterDoses: [{name, mg, scale}], returns {total, perEster}
+  const injDayOffsets = FREQ_DAYS[freq];
+  let total=0;
+  const perEster={};
+
+  esterDoses.forEach(({name,mg,scale})=>{
+    const {h,f}=ESTERS[name];
+    const dose=mg*scale;
+    let s=0;
+    // all injection days up to dayT
+    let day=0;
+    while(day<=cycleEndDay){
+      injDayOffsets.forEach(off=>{
+        const injDay=day+off;
+        if(injDay<=cycleEndDay && injDay<=dayT){
+          const elapsed=dayT-injDay;
+          s+=dose*f*Math.pow(0.5,elapsed/h);
+        }
+      });
+      day+=7;
+    }
+    perEster[name]=(perEster[name]||0)+s;
+    total+=s;
+  });
+  return {total,perEster};
+}
+
+function calculate(){
+  if(!rows.length){alert('Add at least one ester.');return;}
+
+  const weeks     = +document.getElementById('cycleWeeks').value  || 12;
+  const freq      = +document.getElementById('freq').value;
+  const threshold = +document.getElementById('threshold').value   || 600;
+  const ascentW   = Math.min(+document.getElementById('ascentWeeks').value||3, Math.floor(weeks/3));
+  const taperW    = Math.min(+document.getElementById('taperWeeks').value||3, Math.floor(weeks/3));
+  const plateauW  = weeks - ascentW - taperW;
+  const injDays   = FREQ_DAYS[freq];
+  const freqPW    = injDays.length;
+
+  // Step 1: find scale so plateau peak ≤ threshold
+  // At plateau (full accumulation), estimate serum for scale=1
+  // Use midpoint of plateau week for estimation
+  const cycleEndDay = (weeks-1)*7+6;
+  const testDay = (ascentW + Math.floor(plateauW/2))*7 + 3;
+
+  const baseSerum = calcSerum(rows.map(r=>({...r,scale:1})), testDay, cycleEndDay, freq).total;
+  let scale = baseSerum > 0 ? threshold / baseSerum : 1;
+  // cap scale so we don't go below minimum sensible dose
+  const scaledDoses = rows.map(r=>({...r,scale}));
+
+  // Step 2: build per-week data
+  const totalWeeks = weeks + 5;
+  const weeklyData = [];
+
+  for(let w=1; w<=totalWeeks; w++){
+    const dayMid = (w-1)*7 + 3.5;
+    const activeEnd = Math.min(weeks-1, cycleEndDay/7)*7+6;
+
+    // Phase
+    let phase, phaseLabel, phaseCls;
+    if(w > weeks){ phase='clear'; phaseLabel='CLEARANCE'; phaseCls='tc'; }
+    else if(w <= ascentW){ phase='ascent'; phaseLabel='ASCENT'; phaseCls='ta'; }
+    else if(w <= ascentW+plateauW){ phase='plateau'; phaseLabel='PLATEAU'; phaseCls='tp'; }
+    else { phase='taper'; phaseLabel='TAPER'; phaseCls='tt'; }
+
+    // Taper: reduce dose linearly
+    let wScale = scale;
+    if(phase==='taper'){
+      const tw = w - ascentW - plateauW;
+      wScale = scale * (1 - tw/(taperW+1));
+    }
+    if(phase==='ascent'){
+      wScale = scale * (w/(ascentW+1));
+    }
+    if(phase==='clear') wScale=0;
+
+    // For clearance phase, still calc residual from full cycle
+    const effDoses = phase==='clear'
+      ? rows.map(r=>({...r,scale}))
+      : rows.map(r=>({...r,scale:wScale}));
+    const effEnd = phase==='clear' ? (weeks-1)*7+6 : (w-1)*7+6;
+
+    const {total:ser, perEster} = calcSerum(effDoses, dayMid, effEnd, freq);
+
+    // Pin days this week
+    let pinDays='—', pinAmt='—';
+    if(phase!=='clear'){
+      const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const baseDay=(w-1)*7;
+      pinDays = injDays.map(o=>dayNames[(o)%7]).join(' + ');
+      const dosePerInj = rows.reduce((sum,r)=>sum+r.mg*wScale,0);
+      pinAmt = dosePerInj.toFixed(1)+'mg/inj';
+    }
+
+    weeklyData.push({
+      w, phase, phaseLabel, phaseCls,
+      totalSerum: Math.round(ser),
+      perEster,
+      pinDays, pinAmt,
+      pct: w > weeks
+    });
+  }
+
+  // Clearance calculation
+  const hMax = Math.max(...rows.map(r=>ESTERS[r.name].h));
+  const serumAtEnd = weeklyData[weeks-1]?.totalSerum || 0;
+  const Cmin = 1;
+  const clearDays = serumAtEnd > 0
+    ? Math.round(hMax * Math.log2(serumAtEnd/Cmin))
+    : 0;
+  const clearWeeks = Math.ceil(clearDays/7);
+
+  // Render stats
+  const peakSer = Math.max(...weeklyData.filter(d=>!d.pct).map(d=>d.totalSerum));
+  const weeklyTest = rows.reduce((s,r)=>s+r.mg*scale*freqPW*ESTERS[r.name].f,0);
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat"><div class="sv">${Math.round(weeklyTest)}<span style="font-size:13px">mg</span></div><div class="sl">Actual Test / Week</div></div>
+    <div class="stat"><div class="sv o">${Math.round(peakSer)}<span style="font-size:13px">mg</span></div><div class="sl">Peak Serum (ester wt)</div></div>
+    <div class="stat"><div class="sv g">${scale.toFixed(3)}×</div><div class="sl">ASAM Scale Factor</div></div>
+    <div class="stat"><div class="sv y">~${clearDays}d</div><div class="sl">Full Clearance</div></div>
+  `;
+
+  // Phase timeline
+  document.getElementById('phaseRow').innerHTML=`
+    <div class="phase-seg phase-ascent">ASCENT<br>${ascentW}wk</div>
+    <div class="phase-seg phase-plateau">PLATEAU<br>${plateauW}wk</div>
+    <div class="phase-seg phase-taper">TAPER<br>${taperW}wk</div>
+    <div class="phase-seg phase-clear">CLEAR<br>~${clearWeeks}wk</div>
+  `;
+
+  // Main table
+  const maxSer = Math.max(...weeklyData.map(d=>d.totalSerum));
+  let tHTML=`<table><thead><tr>
+    <th>Week #</th>
+    <th>Phase</th>
+    <th>Pin Days</th>
+    <th>Dose / Inj</th>
+    <th>Retained (prev wk)</th>
+    <th>Total Serum This Wk</th>
+    <th>% of Θ</th>
+  </tr></thead><tbody>`;
+
+  weeklyData.forEach((d,i)=>{
+    const prev = i>0 ? weeklyData[i-1].totalSerum : 0;
+    const retained = Math.max(0, prev - (prev * (1-Math.pow(0.5,7/hMax))));
+    const pctThresh = Math.round((d.totalSerum/threshold)*100);
+    const barColor = pctThresh>100 ? 'var(--accent2)' : pctThresh>80 ? 'var(--accent3)' : 'var(--accent)';
+    const barW = Math.round((d.totalSerum/maxSer)*100);
+    const trClass = d.phase==='ascent'?'phase-a':d.phase==='plateau'?'phase-p':d.phase==='taper'?'phase-t':'phase-c';
+
+    tHTML+=`<tr class="${trClass}">
+      <td class="wk">${d.pct?`W${d.w} (post)`:`Week ${d.w}`}</td>
+      <td><span class="tag ${d.phaseCls}">${d.phaseLabel}</span></td>
+      <td class="muted">${d.pinDays}</td>
+      <td class="muted">${d.pinAmt}</td>
+      <td class="num">${Math.round(retained).toLocaleString()} mg</td>
+      <td class="bar-cell num">
+        <div class="bar-fill" style="width:${barW}%;background:${barColor}"></div>
+        <span class="bar-val">${d.totalSerum.toLocaleString()} mg</span>
+      </td>
+      <td class="num" style="color:${pctThresh>100?'var(--accent2)':pctThresh>90?'var(--warn)':'var(--text)'}">${pctThresh}%</td>
+    </tr>`;
+  });
+  tHTML+='</tbody></table>';
+  document.getElementById('mainTable').innerHTML=tHTML;
+
+  // Clearance box
+  const pctStart = Math.round(hMax*2.5);
+  document.getElementById('clearBox').innerHTML=`
+    <div style="color:var(--accent3);font-size:9px;letter-spacing:3px;margin-bottom:8px">// CLEARANCE MODEL</div>
+    <span class="big">T<sub>clear</sub> = ~${clearDays} days (~${clearWeeks} weeks)</span>
+    Longest half-life: ${hMax} days (${rows.find(r=>ESTERS[r.name].h===hMax)?.name||''})<br>
+    Serum at last pin: ~${serumAtEnd.toLocaleString()} mg<br>
+    C<sub>min</sub> floor: 1 mg residual<br>
+    <br>
+    PCT recommended start: Day ${pctStart} post last injection
+  `;
+
+  // Formula box
+  document.getElementById('formulaBox').innerHTML=`
+    <div style="font-size:9px;letter-spacing:3px;margin-bottom:8px">// ASAM CONSTRAINT</div>
+    Threshold Θ = ${threshold} mg/wk actual test<br>
+    Scale factor λ = Θ / S<sub>baseline</sub> = ${scale.toFixed(3)}<br>
+    All D<sub>i</sub> multiplied by λ to satisfy:<br>
+    <span style="color:#fff">&nbsp;&nbsp;S<sub>total</sub>(t) ≤ Θ &nbsp;∀ t ∈ plateau</span><br>
+    <br>
+    Ascent: linear ramp 0→λ over ${ascentW} weeks<br>
+    Taper: linear ramp λ→0 over ${taperW} weeks<br>
+    No abrupt cessation — crash prevention active
+  `;
+
+  // Per-ester table
+  let eHTML=`<table><thead><tr>
+    <th>Ester</th><th>Half-Life</th><th>Conv Factor (f)</th>
+    <th>mg/Inj (scaled)</th><th>mg/Week (ester wt)</th><th>mg/Week (actual test)</th><th>Steady-State ~Week</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach(r=>{
+    const {h,f}=ESTERS[r.name];
+    const scaledInj=(r.mg*scale).toFixed(1);
+    const weeklyEster=(r.mg*scale*freqPW).toFixed(1);
+    const weeklyActual=(r.mg*scale*freqPW*f).toFixed(1);
+    const ssWeek=Math.ceil(h*5/7);
+    eHTML+=`<tr>
+      <td>${r.name}</td>
+      <td class="num">${h} days</td>
+      <td class="num">${f}</td>
+      <td class="num">${scaledInj} mg</td>
+      <td class="num">${weeklyEster} mg</td>
+      <td class="num" style="color:var(--accent)">${weeklyActual} mg</td>
+      <td class="num">~Week ${ssWeek}</td>
+    </tr>`;
+  });
+  eHTML+='</tbody></table>';
+  document.getElementById('esterTable').innerHTML=eHTML;
+
+  document.getElementById('placeholder').style.display='none';
+  const rw=document.getElementById('resultsWrap');
+  rw.classList.add('show');
+  rw.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// Init
+addEster("Testosterone Enanthate",200);
+addEster("Testosterone Propionate",75);
+addEster("Testosterone Cypionate",100);
+</script>
+</body>
+</html>
